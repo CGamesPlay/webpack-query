@@ -1,0 +1,10 @@
+{
+  "license": "MIT",
+  "scripts": {
+    "build-example": "webpack --config example/webpack.config.js"
+  },
+  "devDependencies": {
+    "stats-webpack-plugin": "^0.7.0",
+    "webpack": "3.5.5"
+  }
+}
