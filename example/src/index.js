@@ -1,1 +1,3 @@
-console.log("Main entry point!");
+import { sayHello } from "./module";
+
+sayHello();
