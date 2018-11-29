@@ -14,6 +14,8 @@ export default class Stats {
       throw new Error(
         "Invalid webpack stats file (version " + version + " not supported)",
       );
+    } else if (!json.modules) {
+      throw new Error("Invalid webpack stats file (missing modules stats)");
     } else {
       return new Stats(json);
     }

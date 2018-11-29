@@ -29,10 +29,20 @@ describe("Module", () => {
     expect(module.identifier).toEqual(resolved);
   });
 
+  it(".name is the module name", () => {
+    const module = getModule(1);
+    expect(module.name).toEqual("./src/module.js");
+  });
+
   it(".reasons is an array of Reasons", () => {
     const module = getModule(1);
     const reasons = module.reasons;
     expect(reasons).toHaveLength(1);
     expect(reasons[0]).toBeInstanceOf(Module.Reason);
+  });
+
+  it(".sourceFile gets source from stats", () => {
+    const module = getModule(1);
+    expect(typeof module.sourceFile.source).toEqual("string");
   });
 });
