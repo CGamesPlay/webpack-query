@@ -1,11 +1,23 @@
 {
+  "name": "@cgamesplay/webpack-query",
+  "description": "CLI for inspecting webpack bundles",
+  "homepage": "https://github.com/CGamesPlay/webpack-query",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CGamesPlay/webpack-query.git"
+  },
+  "bugs": { "url": "https://github.com/CGamesPlay/webpack-query/issues" },
   "license": "MIT",
-  "version": "0.0.0",
+  "version": "0.0.0-alpha.1",
   "scripts": {
     "build-example": "cd example; webpack --config ./webpack.config.js",
     "test": "jest",
     "build": "babel src --out-dir lib --ignore 'src/**/*.test.js'",
+    "prepare": "babel src --out-dir lib --ignore 'src/**/*.test.js'",
     "wq": "babel-node -- ./src/index.js"
+  },
+  "bin": {
+    "webpack-query": "./lib/cli.js"
   },
   "devDependencies": {
     "@babel/cli": "^7.1.5",
