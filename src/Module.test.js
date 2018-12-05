@@ -3,6 +3,7 @@ import path from "path";
 import json from "../example/dist/stats.json";
 import Stats from "./Stats";
 import Module from "./Module";
+import SourceFile from "./SourceFile";
 
 const getModule = id => {
   const stats = new Stats(json);
@@ -43,6 +44,6 @@ describe("Module", () => {
 
   it(".sourceFile gets source from stats", () => {
     const module = getModule(1);
-    expect(typeof module.sourceFile.source).toEqual("string");
+    return expect(module.sourceFile).resolves.toBeInstanceOf(SourceFile);
   });
 });

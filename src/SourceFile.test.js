@@ -1,38 +1,95 @@
-import { default as SourceFile, parseLocation } from "./SourceFile";
+import { SourceMapConsumer } from "source-map";
+
+import SourceFile from "./SourceFile";
+import { parseRangeString } from "./utils";
+
+const fakeMap = {
+  version: 3,
+  file: "min.js",
+  names: ["bar", "baz", "n"],
+  sources: ["one.js", "two.js"],
+  sourcesContent: [
+    " ONE.foo = function (bar) {\n   return baz(bar);\n" + " };",
+    " TWO.inc = function (n) {\n   return n + 1;\n" + " };",
+  ],
+  sourceRoot: "/the/root",
+  mappings:
+    "CAAC,IAAI,IAAM,SAAUA,GAClB,OAAOC,IAAID;CCDb,IAAI,IAAM,SAAUE,GAClB,OAAOA",
+};
 
 const fakeSource = `line 1
 line 2
 line 3
 `;
 
-describe("parseLocation", () => {
-  it("handles single line ranges", () => {
-    const loc = parseLocation("1:0-36");
-    expect(loc).toEqual({
-      start: { line: 1, column: 0 },
-      end: { line: 1, column: 36 },
-    });
+describe("SourceFile", () => {
+  it(".codeFrameAt returns a string", async () => {
+    const source = await SourceFile.fromSource("fakeSource", fakeSource);
+    try {
+      const loc = source.originalRange(parseRangeString("2:6-6"));
+      const frame = source.codeFrameAt(loc, { linesAbove: 0, linesBelow: 0 });
+      expect(frame).toEqual("> 2 | line 2\n    |      ^");
+    } finally {
+      source.destroy();
+    }
   });
 
-  it("handles multi line ranges", () => {
-    const loc = parseLocation("18:2-22:4");
-    expect(loc).toEqual({
-      start: { line: 18, column: 2 },
-      end: { line: 22, column: 4 },
-    });
+  it(".rawSourceAt returns a string", async () => {
+    const source = await SourceFile.fromSource("fakeSource", fakeSource);
+    try {
+      const loc = source.originalRange(parseRangeString("2:6-6"));
+      const frame = source.rawSourceAt(loc);
+      expect(frame).toEqual("2");
+    } finally {
+      source.destroy();
+    }
   });
 });
 
-describe("SourceFile", () => {
-  it(".codeFrameAt returns a string", () => {
-    const source = new SourceFile("fakeSource", fakeSource);
-    const frame = source.codeFrameAt(parseLocation("2:6-6"));
-    expect(frame).toEqual("> 2 | line 2\n    |      ^");
+describe("MappedSourceFile", () => {
+  it(".originalRange returns the range", async () => {
+    const source = await SourceFile.fromSourceMap(fakeMap);
+    try {
+      expect(source.originalRange(parseRangeString("1:5-6"))).toMatchObject({
+        start: { line: 1, column: 5, source: "/the/root/one.js" },
+        end: { line: 1, column: 5, source: "/the/root/one.js" },
+      });
+    } finally {
+      source.destroy();
+    }
   });
 
-  it(".lineAt returns a string", () => {
-    const source = new SourceFile("fakeSource", fakeSource);
-    const line = source.lineAt(2);
-    expect(line).toEqual("line 2");
+  it(".sourceForFile returns the source", async () => {
+    const source = await SourceFile.fromSourceMap(fakeMap);
+    try {
+      expect(source.sourceForFile("/the/root/one.js")).toEqual(
+        fakeMap.sourcesContent[0],
+      );
+    } finally {
+      source.destroy();
+    }
+  });
+});
+
+describe("RawSourceFile", () => {
+  it(".originalRange returns the range", async () => {
+    const source = await SourceFile.fromSource("fakeSource", fakeSource);
+    try {
+      expect(source.originalRange(parseRangeString("1:2-4"))).toMatchObject({
+        start: { line: 1, column: 2, source: "fakeSource" },
+        end: { line: 1, column: 4, source: "fakeSource" },
+      });
+    } finally {
+      source.destroy();
+    }
+  });
+
+  it(".sourceForFile returns the source", async () => {
+    const source = await SourceFile.fromSource("fakeSource", fakeSource);
+    try {
+      expect(source.sourceForFile("fakeSource")).toEqual(fakeSource);
+    } finally {
+      source.destroy();
+    }
   });
 });

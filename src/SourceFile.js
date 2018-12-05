@@ -1,41 +1,111 @@
+import { SourceMapConsumer } from "source-map";
 import { codeFrameColumns } from "@babel/code-frame";
 
-export const parseLocation = loc => {
-  let [start, end] = loc
-    .split("-")
-    .map(piece => piece.split(":").map(num => parseInt(num, 10)));
-  return {
-    start: {
-      line: start[0],
-      column: start[1],
-    },
-    end: {
-      line: end.length === 1 ? start[0] : end[0],
-      column: end[end.length - 1],
-    },
-  };
-};
-
 export default class SourceFile {
-  constructor(filename, source) {
-    this.filename = filename;
-    this.source = source;
+  static async fromSourceMap(sourceMapInput) {
+    const map = await new SourceMapConsumer(sourceMapInput);
+    return new MappedSourceFile(map);
   }
 
-  // Returns a string showing the code frame at the given (parsed) location
+  static async fromSource(filename, source) {
+    return new RawSourceFile(filename, source);
+  }
+
+  constructor() {
+    this._lines = {};
+  }
+  destroy() {}
+
   codeFrameAt(loc, options) {
-    return codeFrameColumns(this.source, loc, {
-      linesAbove: 0,
-      linesBelow: 0,
-      ...options,
-    });
+    if (loc.start.source === undefined) {
+      throw new Error("loc is not unmapped");
+    } else if (loc.start.source !== loc.end.source) {
+      throw new Error("loc spans multiple sources");
+    }
+    const source = this.sourceForFile(loc.start.source);
+    return codeFrameColumns(source, loc, options);
   }
 
-  // Returns a string of the specific line requested
-  lineAt(line) {
-    if (!this._lines) {
-      this._lines = this.source.split("\n");
+  rawSourceAt(loc) {
+    if (loc.start.source === undefined) {
+      throw new Error("loc is not unmapped");
+    } else if (loc.start.source !== loc.end.source) {
+      throw new Error("loc spans multiple sources");
     }
-    return this._lines[line - 1];
+    const source = this.linesForSource(loc.start.source);
+    const extracted = [];
+    for (let i = loc.start.line; i <= loc.end.line; i++) {
+      const iStart = i === loc.start.line ? loc.start.column : 1;
+      const iEnd = i === loc.end.line ? loc.end.column : undefined;
+      const line = source[i - 1].substring(iStart - 1, iEnd);
+      extracted.push(line);
+    }
+    return extracted.join("\n");
+  }
+
+  linesForSource(source) {
+    if (!this._lines[source]) {
+      this._lines[source] = this.sourceForFile(source).split("\n");
+    }
+    return this._lines[source];
+  }
+
+  originalRange(loc) {
+    throw new Error("originalRange not implemented");
+  }
+
+  sourceForFile(source) {
+    throw new Error("sourceForFile not implemented");
+  }
+}
+
+export class MappedSourceFile extends SourceFile {
+  constructor(map) {
+    super();
+    this._map = map;
+    this._map.computeColumnSpans();
+  }
+
+  destroy() {
+    this._map.destroy();
+  }
+
+  // Unmaps the given (parsed) location
+  originalRange(loc) {
+    const start = this._map.originalPositionFor({
+      ...loc.start,
+      bias: SourceMapConsumer.LEAST_UPPER_BOUND,
+    });
+    const end = this._map.originalPositionFor({
+      ...loc.end,
+      bias: SourceMapConsumer.GREATEST_LOWER_BOUND,
+    });
+    return { start, end };
+  }
+
+  sourceForFile(file) {
+    return this._map.sourceContentFor(file);
+  }
+}
+
+export class RawSourceFile extends SourceFile {
+  constructor(filename, source) {
+    super();
+    this._filename = filename;
+    this._source = source;
+  }
+
+  originalRange(loc) {
+    return {
+      start: { source: this._filename, ...loc.start },
+      end: { source: this._filename, ...loc.end },
+    };
+  }
+
+  sourceForFile(file) {
+    if (file !== this._filename) {
+      throw new Error(`${file} is not the correct file`);
+    }
+    return this._source;
   }
 }

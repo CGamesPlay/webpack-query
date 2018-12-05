@@ -1,5 +1,7 @@
 import fs from "fs";
-import { default as SourceFile, parseLocation } from "./SourceFile";
+
+import SourceFile from "./SourceFile";
+import { parseRangeString } from "./utils";
 
 export class Reason {
   constructor(stats, json) {
@@ -13,7 +15,7 @@ export class Reason {
 
   get loc() {
     if (!this._loc) {
-      this._loc = parseLocation(this.json.loc);
+      this._loc = parseRangeString(this.json.loc);
     }
     return this._loc;
   }
@@ -44,12 +46,17 @@ export default class Module {
 
   get sourceFile() {
     if (!this._sourceFile) {
-      let source = this.json.source;
-      if (!source) {
-        throw new Error("Module source not available");
+      if (this.json.sourceMap) {
+        this._sourceFile = SourceFile.fromSourceMap(this.json.sourceMap);
+      } else if (this.json.source) {
+        this._sourceFile = SourceFile.fromSource(
+          this.identifier,
+          this.json.source,
+        );
+      } else {
+        throw new Error("Module source/sourceMap not available");
       }
-      this._sourceFile = new SourceFile(this.identifier, source);
     }
-    return this._sourceFile;
+    return this._sourceFile.then(x => x);
   }
 }

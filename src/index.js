@@ -5,6 +5,7 @@ import fs from "fs";
 
 import Stats from "./Stats";
 import packageJson from "../package.json";
+import { locationToLine } from "./utils";
 
 let stats;
 
@@ -12,6 +13,15 @@ const requireStats = () => {
   if (!stats) {
     console.error("No webpack stats file given. Use --file.");
     process.exit(1);
+  }
+};
+
+const formatFilename = f => {
+  const cwd = process.cwd();
+  if (f.slice(0, cwd.length) === cwd) {
+    return f.slice(cwd.length + 1);
+  } else {
+    return f;
   }
 };
 
@@ -46,12 +56,23 @@ program
     console.log(module.identifier);
   });
 
-program.command("list-references <module>").action(name => {
+program.command("list-references <module>").action(async name => {
   const module = stats.resolveModule(name);
   const reasons = module.reasons;
-  reasons.forEach(r => {
-    console.log("Referenced by " + r.module.name);
-    console.log(r.module.sourceFile.codeFrameAt(r.loc));
+  const results = await Promise.all(
+    reasons.map(async r => {
+      const sourceFile = await r.module.sourceFile;
+      const loc = locationToLine(sourceFile.originalRange(r.loc));
+      return { loc, sourceFile };
+    }),
+  );
+  results.forEach(r => {
+    console.log(
+      "%s:%s:%s",
+      formatFilename(r.loc.start.source),
+      r.loc.start.line,
+      r.sourceFile.rawSourceAt(r.loc),
+    );
   });
 });
 
