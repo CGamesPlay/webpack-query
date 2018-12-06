@@ -25,9 +25,22 @@ const formatFilename = f => {
   }
 };
 
+const crash = err => {
+  if (program.trace) {
+    console.error(err);
+  } else {
+    console.error(typeof err.message === "string" ? err.message : err);
+  }
+  process.exit(1);
+};
+
+process.on("uncaughtException", crash);
+process.on("unhandledRejection", (_, err) => crash(err));
+
 program
   .version(packageJson.version)
   .option("-f, --file <path>", "Path to webpack stats file")
+  .option("--trace", "Show full stack trace on errors")
   .on("option:file", () => {
     try {
       stats = Stats.fromJson(

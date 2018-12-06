@@ -38,9 +38,18 @@ export default class Stats {
     return this.modules[id];
   }
 
+  // Like tryResolveModule, but errors if the module can't be found.
+  resolveModule(name) {
+    const module = this.tryResolveModule(name);
+    if (!module) {
+      throw new Error("Unable to resolve module " + name);
+    }
+    return module;
+  }
+
   // Return the module based on the module name. Module name can be a path to a
   // local file, or a literal name in the bundle.
-  resolveModule(name) {
+  tryResolveModule(name) {
     const nameMatch = find(this.json.modules, m => m.name === name);
     if (nameMatch) return this.getModuleById(nameMatch.id);
     if (fs.existsSync(name)) {
