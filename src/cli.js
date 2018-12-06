@@ -17,6 +17,11 @@ const requireStats = () => {
 };
 
 const formatFilename = f => {
+  // Strip the webpack loaders from the source filename
+  const loaderEnd = f.lastIndexOf("!");
+  if (loaderEnd !== -1) {
+    f = f.substr(loaderEnd + 1);
+  }
   const cwd = process.cwd();
   if (f.slice(0, cwd.length) === cwd) {
     return f.slice(cwd.length + 1);
