@@ -40,7 +40,7 @@ const crash = err => {
 };
 
 process.on("uncaughtException", crash);
-process.on("unhandledRejection", (_, err) => crash(err));
+process.on("unhandledRejection", crash);
 
 program
   .version(packageJson.version)
